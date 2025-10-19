@@ -19,7 +19,7 @@ lazy val root = (project in file("."))
     name := "livereload",
     sbtPlugin := true,
     libraryDependencies ++= Seq(
-      "com.lihaoyi" %% "cask" % "0.10.2",
+      "com.lihaoyi" %% "cask" % "0.11.3",
       "com.lihaoyi" %% "upickle" % "4.0.2",
     ),
     credentials ++= Seq(
