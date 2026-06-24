@@ -16,3 +16,4 @@ hydra.sbt
 out
 .bsp
 .metals
+.vscode

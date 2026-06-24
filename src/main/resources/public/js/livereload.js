@@ -5,10 +5,10 @@ class LiveReload{
         var testUrl = "__RELOAD_URL__"
         var reloadUrl = "__RELOAD_URL__"
 
-        if(!testUrl || testUrl.trim().length == 0)
+        if(!testUrl || testUrl.trim().length === 0)
             testUrl = document.href
 
-        console.log("Live Reload: Use " + reloadUrl + " as reload URL")
+        console.log("Reload4sScalaJS: Use " + reloadUrl + " to reload URL and " + testUrl + " to test if server is up.")
 
         var args  = {
         	port:  __PORT__,
@@ -17,11 +17,11 @@ class LiveReload{
             startTimeout: 1000,
             retryTimeout: 300,
             testUrl: testUrl,
-            realoadUrl: reloadUrl
+            reloadUrl: reloadUrl
         }
 
         if(args.debug)
-            console.log("Live Reload:", JSON.stringify(args))
+            console.log("Reload4sScalaJS:", JSON.stringify(args))
 
         var url = "ws://localhost:"+args.port+"/ws"
 
@@ -43,14 +43,14 @@ class LiveReload{
         function pageReload(max){
 
             if(max <= 0){
-                console.error("Live Reload: reload limit found")
+                console.error("Reload4sScalaJS: reload limit found")
                 return
             }
 
             checkServerIsUp(() => {
 
-                if(args.realoadUrl && args.realoadUrl.trim().length > 0)
-                    location.href = args.realoadUrl
+                if(args.reloadUrl && args.reloadUrl.trim().length > 0)
+                    location.href = args.reloadUrl
                 else
                     location.reload()
 
@@ -64,10 +64,10 @@ class LiveReload{
         }
 
         liveReload.onopen = function (event) {
-            console.log("Live Reload: Enabled.")
+            console.log("Reload4sScalaJS: Enabled.")
         }
         liveReload.onclose = function (event) {
-            console.log("Live Reload: Closed.")
+            console.log("Reload4sScalaJS: Closed.")
         }
         liveReload.onmessage = function (event) {
             let data = JSON.parse(event.data)
@@ -77,7 +77,7 @@ class LiveReload{
             }
             if (eventKey === "reload") {
                 liveReload.close()
-                console.log("Live Reload: reload")
+                console.log("Reload4sScalaJS: call to reload message received.")
                 setTimeout(() => {
                     pageReload(args.tryLimit)
                 }, args.startTimeout)
@@ -88,11 +88,11 @@ class LiveReload{
                 else if (level === "log") console.log(message)
                 else if (level === "warn") console.warn(message)
                 else if (level === "error") console.error(message)
-                else console.log("Live Reload:", message)
-            } else if(eventKey == "alive") {
-            	console.log("Live Reload: Channel is alive.")
+                else console.log("Reload4sScalaJS:", message)
+            } else if(eventKey === "alive") {
+            	console.log("Reload4sScalaJS: Channel is alive.")
             } else {
-                console.log("Live Reload: Unknown message: " + data)
+                console.log("Reload4sScalaJS: Unknown message: " + data)
             }
         }
         

@@ -1,7 +1,7 @@
 package br.com.mobilemind
 
-//import org.scalajs.dom
+import org.scalajs.dom.document
 
 
 @main def main(args: String*) =
-	println("scalajs rocks =)")
+	document.getElementById("app").innerHTML = "Hello World!!"

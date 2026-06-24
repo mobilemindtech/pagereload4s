@@ -1,6 +1,6 @@
-package br.com.mobilemind.livereload.core
+package br.com.mobilemind.r4sjs.core
 
-import br.com.mobilemind.livereload.plugin.CustomLogger
+import br.com.mobilemind.r4sjs.plugin.CustomLogger
 import cask.Ws
 import cask.endpoints.WsChannelActor
 import cask.model.Response
@@ -9,9 +9,11 @@ import upickle.default.*
 
 import java.io
 import java.io.{BufferedReader, File, FileReader, InputStreamReader}
-import scala.collection.JavaConverters.*
+import scala.annotation.tailrec
+import scala.collection.concurrent.TrieMap
 import scala.collection.mutable.ListBuffer
-import scala.util.parsing.input.StreamReader
+import scala.jdk.CollectionConverters.*
+import scala.util.{Success, Using}
 
 
 case class ServerConfigs(port: Option[Int]  = None,
@@ -23,91 +25,106 @@ class myStaticResources(path: String, headers: Seq[(String, String)]) extends
 
 case class Asset(data: String, contentType: String, status: Int = 200)
 
-case class ClientWsSession(channel: WsChannelActor, actor: cask.WsActor)
 object WsSession {
 
-	private var sessions = ListBuffer[ClientWsSession]()
+	private val sessions = TrieMap[WsChannelActor, cask.WsActor]()
 
-	def count = sessions.length
+	def count: Int = sessions.size
 
-	def newSession(id: String)(implicit ctx: castor.Context, log: cask.Logger): cask.WsHandler = {
+	def newSession(id: String)(using ctx: castor.Context, log: cask.Logger): cask.WsHandler = {
 		cask.WsHandler { channel =>
 			val actor = newSession(id, channel)
 			channel.send(createEvent("alive"))
-			sessions.append(ClientWsSession(channel, actor))
+			sessions += (channel -> actor)
 			actor
 		}
 	}
 
-	private def newSession(id: String, channel: WsChannelActor)(implicit ctx: castor.Context, log: cask.Logger): cask.WsActor = {
-			cask.WsActor {
-				case cask.Ws.Text("") => channel.send(cask.Ws.Close())
+	private def newSession(id: String, channel: WsChannelActor)(using ctx: castor.Context, log: cask.Logger): cask.WsActor = {
+
+		cask.WsActor {
+				case cask.Ws.Text("") =>
+					channel.send(cask.Ws.Close())
+					removeSession(channel)
 				case cask.Ws.Text(data) =>
 					channel.send(cask.Ws.Text(id + " " + data))
 				case cask.Ws.ChannelClosed() =>
-					if(sessions.exists { _.channel == channel })
-						sessions -= sessions.find { _.channel == channel }.get
+					removeSession(channel)
 					//if (idx > -1) sessions.remove(idx)
+				case _: cask.Ws.Close =>
+					removeSession(channel)
 			}
 	}
 
+	private def removeSession(channel: WsChannelActor) =
+		sessions -= channel
 
 	def notify(logger: CustomLogger): Unit = {
-		logger.info(s"[info] LiveReload: ${sessions.size} active sessions")
-		sessions.foreach {
-			client => {
-				client.channel.send(createEvent("reload"))
-				client.channel.send(Ws.Close())
-			}
+		@tailrec
+		def sendAndClose(activeSessions: Seq[(WsChannelActor, cask.WsActor)]): Unit = {
+			activeSessions match
+				case Nil => ()
+				case (channel, _) :: xs =>
+					//println (s"LiveReload: send reload to client")
+					channel.send (createEvent("reload") )
+					channel.send (Ws.Close () )
+					removeSession (channel)
+					sendAndClose(xs)
 		}
+		sendAndClose(sessions.toList)
 	}
 
 	private def createEvent(s: String) =
 		Ws.Text(write(Map("event" -> s)))
 
-	def stop(): Unit = {
+	def stop(): Unit =
 		sessions.clear()
-	}
 }
 
-class AppController(dist: => Option[File], reloadUrl: Option[String])(implicit ctx: castor.Context,
-																					log: cask.Logger) extends cask.MainRoutes {
+class AppController(dist: => Option[File], reloadUrl: Option[String])
+									 (using ctx: castor.Context, log: cask.Logger) extends cask.MainRoutes {
 
-	private def readIndexHtml(path: File): Option[String] = {
+	private def readIndexHtml(req: cask.Request, path: File): Option[String] = {
 		val indexFile = new File(path, s"index.html")
-		if(indexFile.exists()) {
-			val reader = new BufferedReader(new FileReader(indexFile))
-			try{
-				val lines = reader.lines().toList.asScala
-				Some(lines.mkString("\n"))
-			}finally {
-				reader.close()
-			}
-		} else None
+		if indexFile.exists() then
+			Using(new BufferedReader(new FileReader(indexFile))) { reader =>
+				val html = reader.lines()
+					.toList
+					.asScala
+					.mkString("\n")
+
+				if html.contains("/livereload.js")
+				then html
+				else
+					val port = req.exchange.getHostPort
+					val jsUrl = reloadUrl.getOrElse(s"http://localhost:$port/js/livereload.js")
+					html.replace("</body>", s"""<script src="$jsUrl"></script>\n</body>""")
+
+			}.map(Some(_)).getOrElse(None)
+		else None
 	}
 
 	private def readAsset(assetPath: File, assetParts: String): Asset = {
 		val file = new File(assetPath, s"/assets/${assetParts}")
-		if (file.exists()) {
+		val assetNotFound = Asset(s"file ${file.getAbsolutePath} not found", "text/plain", 404)
+		if file.exists() then
 			val fileName = file.getName
 			val ext = fileName.split("\\.").toList.last
 			val contentType = MimeTypes.values.getOrElse(s".$ext", MimeTypes.defaultMimeType)
-			val reader = new BufferedReader(new FileReader(file))
-			try {
+			Using(new BufferedReader(new FileReader(file))) { reader =>
 				val data = reader.lines().toList.asScala.mkString("\n")
 				Asset(data, contentType)
-			} finally reader.close()
-
-		} else Asset(s"file ${file.getAbsolutePath} not found", "text/plain", 404)
+			}.getOrElse(assetNotFound)
+		else assetNotFound
 	}
 
 	@cask.get("/healthcheck")
 	def healthcheck() = s"live reload is alive"
 
 	@cask.get("/")
-	def index(): Response[String] = {
+	def index(req: cask.Request): Response[String] = {
 		val resp = dist match {
-			case Some(file) => readIndexHtml(file).getOrElse("index.html not fond")
+			case Some(file) => readIndexHtml(req, file).getOrElse("index.html not fond")
 			case _ => "live reload is alive"
 		}
 		cask.Response(resp, 200, Seq("Content-Type" -> "text/html"))
@@ -121,11 +138,10 @@ class AppController(dist: => Option[File], reloadUrl: Option[String])(implicit c
 	@cask.get("/assets", subpath = true)
 	def assets(req: cask.Request) = {
 		dist match {
-			case Some(f) => {
+			case Some(f) =>
 				val assetParts = req.remainingPathSegments.mkString("/")
 				val Asset(data, contentType, status)= readAsset(f, assetParts)
 				cask.Response(data, status, Seq("Content-Type" -> contentType))
-			}
 			case _ => cask.Response("not found", 404)
 		}
 	}
@@ -134,21 +150,22 @@ class AppController(dist: => Option[File], reloadUrl: Option[String])(implicit c
 	def demo() = "public/html/index.html"
 
 	@cask.get("/js/livereload.js", subpath = true)
-	def staticJs(req: cask.Request) = {
-		val res = classOf[cask.staticResources].getClassLoader.getResourceAsStream("public/js/livereload.js")
-		val buffer = new BufferedReader(new InputStreamReader(res))
-		try{
-
+	def livereloadJS(req: cask.Request) = {
+		val res = classOf[cask.staticResources]
+			.getClassLoader
+			.getResourceAsStream("public/js/livereload.js")
+		Using(new BufferedReader(new InputStreamReader(res))) { reader =>
 			val port = req.exchange.getHostPort
-			val content = buffer
+			reader
 				.lines()
 				.toList
 				.asScala
 				.map(_.replace("__PORT__", port.toString))
-				.map(_.replace("__RELOAD_URL__", reloadUrl.getOrElse("")))
+				.map(_.replace("__RELOAD_URL__", reloadUrl.getOrElse(s"http://localhost:$port")))
 				.mkString("\n")
-			cask.Response(content, 200, Seq("Content-Type" -> "text/javascript"))
-		}finally buffer.close()
+		} match
+			case Success(data) => cask.Response(data, 200, Seq("Content-Type" -> "text/javascript"))
+			case _ => cask.Response("not found", 404)
 	}
 
 	@cask.websocket("/ws")
@@ -168,10 +185,10 @@ object Server extends cask.Main {
 
 	def allRoutes: Seq[AppController] = Seq(new AppController(getDist, getReloadUrl))
 
-	def setLogger(l: CustomLogger): Unit = logger = Some(l)
+	def setLogger(customLogger: CustomLogger): Unit = logger = Some(customLogger)
 
-	def start(l: CustomLogger, conf: ServerConfigs): Unit = {
-		logger = Some(l)
+	def start(customLogger: CustomLogger, conf: ServerConfigs): Unit = {
+		logger = Some(customLogger)
 		configs = Some(conf)
 		main(Array())		
 	}
@@ -196,10 +213,10 @@ object Server extends cask.Main {
 			.build
 		srv.start()
 		server = Some(srv)
-		logger.foreach(_.info(s"Start server on http://localhost:${port}"))
+		logger.foreach(_.info(s"[Reload for ScalaJS] Start server on http://localhost:${port}"))
 	}
 
-	def notify(l: CustomLogger): Unit = {
-		WsSession.notify(l)
+	def notify(customLogger: CustomLogger): Unit = {
+		WsSession.notify(customLogger)
 	}
 }

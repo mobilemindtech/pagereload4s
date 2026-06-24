@@ -1,30 +1,26 @@
 
-lazy val scala212 = "2.12.20"
-lazy val scala213 = "2.13.15"
-lazy val scala3 = "3.6.2"
-lazy val scalaVersions = List(scala212, scala213, scala3)
+lazy val scala3 = "3.8.4"
 
-ThisBuild / crossScalaVersions := scalaVersions
-ThisBuild / scalaVersion     := scala212
-ThisBuild / version          := "0.2.10"
-ThisBuild / organization     := "br.com.mobilemind"
-ThisBuild / organizationName := "Mobild Mind"
-ThisBuild / organizationHomepage := Some(url("https://mobilemind.com.br"))
-ThisBuild /description := "ScalaJS live reload"
-ThisBuild / sonatypeCredentialHost := "s01.oss.sonatype.org"
+scalaVersion     := scala3
+version          := "0.3.0"
+organization     := "br.com.mobilemind"
+organizationName := "Mobild Mind"
+organizationHomepage := Some(url("https://www.mobilemind.com.br"))
+description := "Live Reload for ScalaJS"
+//sonatypeCredentialHost := "s01.oss.sonatype.org"
 
 
 lazy val root = (project in file("."))
   .settings(
-    name := "livereload",
+    name := "reload4scalajs",
     sbtPlugin := true,
     libraryDependencies ++= Seq(
-      "com.lihaoyi" %% "cask" % "0.10.2",
-      "com.lihaoyi" %% "upickle" % "4.0.2",
+      "com.lihaoyi" %% "cask" % "0.11.3",
+      "com.lihaoyi" %% "upickle" % "4.4.3",
     ),
-    credentials ++= Seq(
-      Credentials(Path.userHome / ".sbt" / "sonatype_credentials"),
-      Credentials(Path.userHome / ".sbt" / "sonatype_gpg")
-    )
+    //credentials ++= Seq(
+    //  Credentials(Path.userHome / ".sbt" / "sonatype_credentials"),
+    //  Credentials(Path.userHome / ".sbt" / "sonatype_gpg")
+    //)
 )
-  .settings(addSbtPlugin("org.scala-js" % "sbt-scalajs" % "1.17.0"))
+  .settings(addSbtPlugin("org.scala-js" %% "sbt-scalajs" % "1.22.0"))

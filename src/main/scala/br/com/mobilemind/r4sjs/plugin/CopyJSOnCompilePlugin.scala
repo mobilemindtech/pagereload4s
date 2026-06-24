@@ -1,4 +1,4 @@
-package br.com.mobilemind.livereload.plugin
+package br.com.mobilemind.r4sjs.plugin
 
 import sbt.*
 import Keys.*
@@ -6,24 +6,24 @@ import org.scalajs.sbtplugin.ScalaJSPlugin
 import org.scalajs.sbtplugin.ScalaJSPlugin.autoImport._
 
 // this does not adjust the content of the source map at all!
-object CopyFullJSPlugin extends AutoPlugin {
+object CopyJSOnCompilePlugin extends AutoPlugin {
 
   override def requires = ScalaJSPlugin
-  final object autoImport {
-    val copyFullTarget = SettingKey[File]("copyTarget", "scala.js linker artifact copy target directory")
-    val copyFullJS     = TaskKey[Unit]("copyJS", "Copy scala.js linker artifacts to another location after linking.")
+  object autoImport {
+    val copyJsToFile = SettingKey[File]("copyJsToFile", "Absolute file path to copy js after compile")
+    val performCopyJs     = TaskKey[Unit]("performCopyJs", "Performs the JS copy")
   }
   import autoImport._
 
   override lazy val projectSettings: Seq[Def.Setting[Task[Unit]]] = Seq(
-    copyFullJS := copyJSTask.value,
-    fastOptJS / copyFullJS := (copyFullJS triggeredBy (Compile / fastOptJS)).value,
-    fullOptJS / copyFullJS := (copyFullJS triggeredBy (Compile / fullOptJS)).value
+    performCopyJs := copyJSTask.value,
+    fastOptJS / performCopyJs := performCopyJs.triggeredBy(Compile / fastOptJS).value,
+    fullOptJS / performCopyJs := performCopyJs.triggeredBy(Compile / fullOptJS).value
   )
   //define inline in autoImport via `copyJSTask := {` or separately like this
   private def copyJSTask = Def.task {
     val logger = streams.value.log
-    val odir = copyFullTarget.value
+    val odir = copyJsToFile.value
     val src = (Compile / scalaJSLinkedFile).value.data
     val isJsFileName = odir.getCanonicalPath.endsWith(".js")
     val fileName = if (isJsFileName) odir.name else src.name

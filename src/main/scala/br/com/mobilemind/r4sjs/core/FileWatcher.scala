@@ -1,10 +1,10 @@
-package br.com.mobilemind.livereload.core
+package br.com.mobilemind.r4sjs.core
 
-import br.com.mobilemind.livereload.plugin.CustomLogger
+import br.com.mobilemind.r4sjs.plugin.CustomLogger
 
 import java.io.{File, FileWriter, IOException}
 import java.nio.file.StandardWatchEventKinds.{ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY}
-import java.nio.file.{Paths, *}
+import java.nio.file.*
 import java.security.MessageDigest
 import java.time.LocalDateTime
 import java.util.{Timer, TimerTask}
@@ -13,7 +13,7 @@ import scala.collection.mutable
 
 object FileWatcher {
 	private var logger: Option[CustomLogger]  = None
-	private var watchers: mutable.ListBuffer[FileWatcher] = new mutable.ListBuffer
+	private val watchers: mutable.ListBuffer[FileWatcher] = new mutable.ListBuffer
 
 	private def log(text: String): Unit = logger.foreach(_.info(text))
 
@@ -39,7 +39,7 @@ class FileWatcher(val extensions: List[String], debug: Boolean = false){
 
 	watchers.append(this)
 
-	def stop() = {
+	def stop(): Unit = {
 		running = false
 		timer.foreach(_.cancel())
 	}

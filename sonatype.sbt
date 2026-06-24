@@ -1,3 +1,4 @@
+/*
 // Your profile name of the sonatype account. The default is the same with the organization value
 sonatypeProfileName := "br.com.mobilemind"
 
@@ -28,4 +29,4 @@ developers := List(
 )
 
 publishTo := sonatypePublishToBundle.value
-
+*/

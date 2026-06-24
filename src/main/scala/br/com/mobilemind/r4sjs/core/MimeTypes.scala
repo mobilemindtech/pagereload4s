@@ -1,4 +1,4 @@
-package br.com.mobilemind.livereload.core
+package br.com.mobilemind.r4sjs.core
 
 object MimeTypes {
   val defaultMimeType = "application/octet-stream"
