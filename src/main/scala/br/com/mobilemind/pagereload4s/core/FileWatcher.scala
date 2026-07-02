@@ -44,7 +44,8 @@ object Watcher {
 	          pathWatchToCopy: Option[File],
 	          pathToCopy: Option[File],
 	          notifyOnChange: Boolean,
-	          notificationDelay: Long): Unit = {
+	          notificationDelay: Long,
+	          renameRules: Map[String, String]): Unit = {
 
 		val reloadWatcher = FileWatcher.create(extensions, debug)
 		val copyWatcher = FileWatcher.create(extensions, debug)
@@ -66,8 +67,18 @@ object Watcher {
 			case (Some(watchPath), Some(copyTo)) =>
 				logger.info(s":: starting watcher in path `${watchPath.getAbsolutePath}` to copy to $copyTo")
 				copyWatcher.start(watchPath) { changedFile =>
-						val to = Paths.get(copyTo.getAbsolutePath, changedFile.getFileName.toString)
-						Files.copy(changedFile, to, StandardCopyOption.REPLACE_EXISTING)
+
+					val changedFileName = changedFile.getFileName.toString
+					val sp = changedFileName.split("\\.")
+					val ext = sp.last
+					val name = sp.head
+					val destinationFileName = renameRules.get(name) match {
+						case Some(renameTo) => s"$renameTo.$ext"
+						case None => changedFileName
+					}
+
+					val to = Paths.get(copyTo.getAbsolutePath, destinationFileName)
+					Files.copy(changedFile, to, StandardCopyOption.REPLACE_EXISTING)
 				} match {
 					case Failure(ex) => logger.error(ex.getMessage)
 					case _ => ()

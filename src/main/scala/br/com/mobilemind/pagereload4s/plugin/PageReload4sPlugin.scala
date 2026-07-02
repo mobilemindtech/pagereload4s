@@ -23,7 +23,7 @@ object PageReload4sPlugin extends AutoPlugin {
                              pathWatchToReload: File | Null = null,
 
                             /**
-                             * Watch target folder to copy artifacts on changes
+                             * Watch the target folder to copy artifacts on changes
                              */
                             watchDefaultTargetToCopy: Boolean = true,
 
@@ -33,7 +33,8 @@ object PageReload4sPlugin extends AutoPlugin {
                             copyJsToPath: File | Null = null,
 
                             /**
-                             * Copy js to a specific file, example /path/js/main.js
+                             * Copy js to a specific file, example /path/js/main.js, when executes the
+                             * task `pagereloadPerformCopy`
                              */
                             copyJsToFile: File | Null = null,
 
@@ -48,7 +49,7 @@ object PageReload4sPlugin extends AutoPlugin {
                             debug: Boolean = false,
 
                             /**
-                             * Delay to send reload notification to websocket client
+                             * Delay to send reload notification to the websocket client
                              */
                             notificationDelay: Long = 1000,
 
@@ -65,7 +66,12 @@ object PageReload4sPlugin extends AutoPlugin {
                             /**
                              * URL to reload on change, default is http://localhost:10101
                              */
-                            reloadURL: String | Null = null)
+                            reloadURL: String | Null = null,
+
+                             /**
+                              * Rename rules. Eg.: ("main" -> "myapp")
+                              */
+                             renameRules: Map[String, String] = Map.empty)
 
     val pagereload = SettingKey[ReloadConfig]("pagereload", "ReloadConfig settings")
 
@@ -85,6 +91,7 @@ object PageReload4sPlugin extends AutoPlugin {
 
     fastOptJS / pagereloadPerformCopy := pagereloadPerformCopy.triggeredBy(Compile / fastOptJS).value,
     fullOptJS / pagereloadPerformCopy := pagereloadPerformCopy.triggeredBy(Compile / fullOptJS).value,
+    fastLinkJS / pagereloadPerformCopy := pagereloadPerformCopy.triggeredBy(Compile / fastLinkJS).value,
 
     pagereloadPerformCopy := Def.uncached {
       pagereload.value match
@@ -148,7 +155,8 @@ object PageReload4sPlugin extends AutoPlugin {
             pathWatchToCopy = pathWatchToCopy,
             pathToCopy = Option(config.copyJsToPath),
             notifyOnChange = true,
-            notificationDelay = config.notificationDelay)
+            notificationDelay = config.notificationDelay,
+            renameRules = config.renameRules)
 
     },
 

@@ -27,7 +27,7 @@ sbt new mobilemindtech/pagereload4s.g8
 * `serverPort: Int = 10101` Server port
 * `extensions: Seq[String] = Seq("js", "map", "css", "jpg", "jpeg", "png", "ico", "html")` File extensions to watch
 * `reloadURL: String | Null = null` URL to reload on change, default is http://localhost:10101
-                            
+* `renameRules: Map[String, String] = Map.empty` Rename rules. Eg.: `Map("main" -> "myapp")`
 
 
 #### Use the plugin to copy files to an external location.
