@@ -6,6 +6,13 @@
 sbt new mobilemindtech/pagereload4s.g8 
 ```
 
+## Add plugin
+
+```sbt
+resolvers += ("Mobile Mind" at "https://raw.githubusercontent.com/mobilemindtech/m2/master")
+addSbtPlugin("br.com.mobilemind" % "pagereload4s" % "0.4.0")
+```
+
 ## Options
 
 ### Tasks
@@ -28,7 +35,6 @@ sbt new mobilemindtech/pagereload4s.g8
 * `extensions: Seq[String] = Seq("js", "map", "css", "jpg", "jpeg", "png", "ico", "html")` File extensions to watch
 * `reloadURL: String | Null = null` URL to reload on change, default is http://localhost:10101
 * `renameRules: Map[String, String] = Map.empty` Rename rules. Eg.: `Map("main" -> "myapp")`
-
 
 #### Use the plugin to copy files to an external location.
 
@@ -161,3 +167,26 @@ maven central
 ```
 sbt sonatypeBundleRelease
 ```
+
+## CopyJSPLugin
+
+### Settings
+
+`moduleName`: Name of js file
+`copyJSToPath`: Path destination to copy js file
+
+## Usage
+
+```sbt
+lazy val app = (project in file("."))
+  .enablePlugins(ScalaJSPlugin, CopyJSPlugin)
+  .settings(
+    moduleName := "example-app",
+    copyJSToPath := baseDirectory.value / "dist",
+    scalaJSUseMainModuleInitializer := true,
+    libraryDependencies ++= Seq(
+      "org.scala-js" %%% "scalajs-dom" % "2.8.1"
+    )
+  )
+```
+Will be generated `dist/example-app.js` and `dist/example-app.js.map` on `fastLinkJS` and `fullLinkJS`.

@@ -1,8 +1,8 @@
 
-lazy val scala3 = "3.8.4"
+lazy val scala3 = "3.9.0"
 
 scalaVersion     := scala3
-version          := "0.3.0"
+version          := "0.4.0"
 organization     := "br.com.mobilemind"
 organizationName := "Mobild Mind"
 organizationHomepage := Some(url("https://www.mobilemind.com.br"))

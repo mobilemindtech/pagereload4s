@@ -92,6 +92,7 @@ object PageReload4sPlugin extends AutoPlugin {
     fastOptJS / pagereloadPerformCopy := pagereloadPerformCopy.triggeredBy(Compile / fastOptJS).value,
     fullOptJS / pagereloadPerformCopy := pagereloadPerformCopy.triggeredBy(Compile / fullOptJS).value,
     fastLinkJS / pagereloadPerformCopy := pagereloadPerformCopy.triggeredBy(Compile / fastLinkJS).value,
+    fullLinkJS / pagereloadPerformCopy := pagereloadPerformCopy.triggeredBy(Compile / fullLinkJS).value,
 
     pagereloadPerformCopy := Def.uncached {
       pagereload.value match
