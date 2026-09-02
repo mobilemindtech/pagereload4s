@@ -168,7 +168,7 @@ maven central
 sbt sonatypeBundleRelease
 ```
 
-## CopyJSPLugin
+## CopyJSPlugin
 
 ### Settings
 
